@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TensorFlow.js Face Landmarks</title>
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.wasm.min.js"></script>
+    <script src="https://5c12454b.h5-resource-test.pages.dev/tf.min.js"></script>
+    <script src="https://5c12454b.h5-resource-test.pages.dev/tf-backend-wasm.min.js"></script> 
+    <script type="module" src="./script.js"></script>
+    <style>
+        #video, #videoCanvas, #landmarksCanvas{
+            display: block;
+            margin: auto;
+        }
+        #container {
+            position: relative;
+            width: max-content;
+            margin: auto;
+        }
+        #videoCanvas, #landmarksCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <video id="video" autoplay playsinline></video>
+        <canvas id="videoCanvas"></canvas>
+        <canvas id="landmarksCanvas"></canvas>
+    </div>
+    <div id="Values">
+        Face detector loading time: <span id="facedetector_load">-</span><br>
+        TFJS 106 loading time: <span id="tfjs106_load">-</span><br>
+        ONNX 106 loading time: <span id="onnx106_load">-</span><br>
+        TFJS tensor processing time: <span id="tfjs106_tensor">-</span><br>
+        ONNX tensor processing time: <span id="onnx106_tensor">-</span><br>
+        Face detector inference time: <span id="facedetector_inference">-</span><br>
+        TFJS 106 inference time: <span id="tfjs106_inference">-</span><br>
+        ONNX 106 inference time: <span id="onnx106_inference">-</span><br>
+        ONNX TFJS inference improvement %: <span id="onnx_tfjs_different">-</span><br>
+        Left Eye Aspect Ratio: <span id="leftEarValue">-</span><br>
+        Right Eye Aspect Ratio: <span id="rightEarValue">-</span><br>
+        Mouth Aspect Ratio: <span id="MAR">-</span><br>
+        Yaw: <span id="YAW">-</span>
+    </div>
+    <p>Open the console to see the model output.</p>
+</body>
+</html>
