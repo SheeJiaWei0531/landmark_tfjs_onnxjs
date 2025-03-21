@@ -1,9 +1,14 @@
 // import { FilesetResolver, FaceDetector } from "./package/vision_bundle.mjs";
-import { FilesetResolver, FaceDetector } from "https://dc9911a6.h5-resource-test.pages.dev/vision_bundle.mjs";
+import { FilesetResolver, FaceDetector } from "./vision_package/vision_bundle.mjs";
 
+let accelerator = "wasm"
 
+function average(arr) {
+    if (arr.length === 0) return 0;  // Prevent division by zero
+    return arr.reduce((sum, value) => sum + value, 0) / arr.length;
+  }
 
-async function preprocessFaceImage(faceImageData, targetWidth = 112, targetHeight = 112) {
+async function onnx_tensorprocessor(faceImageData, targetWidth = 112, targetHeight = 112) {
     const offscreenCanvas = document.createElement('canvas');
     offscreenCanvas.width = targetWidth;
     offscreenCanvas.height = targetHeight;
@@ -36,9 +41,9 @@ async function preprocessFaceImage(faceImageData, targetWidth = 112, targetHeigh
   
     // Define the tensor shape: [batch, channels, height, width]
     const dims = [1, 3, targetHeight, targetWidth];
-    const inputTensor = new ort.Tensor("float32", float32Data, dims);
+    const inputONNXTensor = new ort.Tensor("float32", float32Data, dims);
   
-    return inputTensor;
+    return inputONNXTensor;
   }
 
 let facedetector;
@@ -56,21 +61,22 @@ async function initializeMediaPipe() {
     const loadtime = Math.round(endtime -startime);
     const fdloadelement = document.getElementById("facedetector_load")
     fdloadelement.textContent = loadtime;
-    console.log("Face detector model loaded");
+    // console.log("Face detector model loaded");
     return facedetector;
 }
 
 async function initializeONNXLandmarkModel() {
     // Load your ONNX model for landmarks
+    console.log("ONNX Backend", accelerator)
     const sessionOption = { 
-        executionProviders: ['wasm'], 
-        executionMode: "parallel", 
+        executionProviders: [accelerator], 
+        executionMode: "sequential", 
         enableCpuMemArena: true,
         enableGraphCapture: false,
         enableMemPattern: true,
         enableProfiling: false,
-        interOpNumThreads: 2,
-        intraOpNumThreads: 2,
+        interOpNumThreads: 1,
+        intraOpNumThreads: 1,
         graphOptimizationLevel: "all"
      };
     const startime = performance.now();
@@ -79,10 +85,10 @@ async function initializeONNXLandmarkModel() {
     const loadtime = Math.round(endtime -startime);
     const onnxloadelement = document.getElementById("onnx106_load")
     onnxloadelement.textContent = loadtime;
-    console.log("ONNX landmark model loaded");
-    console.log("ONNX session", session);
-    console.log("inputname", session.inputNames);
-    console.log("outputname", session.outputNames);
+    // console.log("ONNX landmark model loaded");
+    // console.log("ONNX session", session);
+    // console.log("inputname", session.inputNames);
+    // console.log("outputname", session.outputNames);
     return session;
   }
 
@@ -91,14 +97,14 @@ async function setupCamera() {
         const video = document.getElementById('video');
         const constraints = {
             video: {
-                width: { ideal: 720 },
-                height: { ideal: 640 },
-                frameRate: { ideal: 60 }
+                width: { ideal: 360 },
+                height: { ideal: 270 },
+                frameRate: { ideal: 30 }
             }
         };
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         video.srcObject = stream;
-        
+
         return new Promise((resolve) => {
             video.onloadedmetadata = () => {
                 console.log("Actual Video Width:", video.videoWidth);
@@ -113,28 +119,28 @@ async function setupCamera() {
 }
 
 async function loadModel() {
-    console.log('Model load start');
+    // console.log('Model load start');
     const startime = performance.now();
     const model = await tf.loadGraphModel('./model/tensorflowjs/model.json');
     const endtime = performance.now();
     const loadtime = Math.round(endtime -startime);
     const tfjsloadelement = document.getElementById("tfjs106_load")
     tfjsloadelement.textContent = loadtime;
-    console.log('Model loaded');
+    // console.log('Model loaded');
 
     // Inspect the model input details
-    model.inputs.forEach(input => {
-        console.log(`Input name: ${input.name}`);
-        console.log(`Input shape: ${input.shape}`);
-        console.log(`Input dtype: ${input.dtype}`);
-    });
+    // model.inputs.forEach(input => {
+    //     console.log(`Input name: ${input.name}`);
+    //     console.log(`Input shape: ${input.shape}`);
+    //     console.log(`Input dtype: ${input.dtype}`);
+    // });
 
-    // Inspect the model output details
-    model.outputs.forEach(output => {
-        console.log(`Output name: ${output.name}`);
-        console.log(`Output shape: ${output.shape}`);
-        console.log(`Output dtype: ${output.dtype}`);
-    });
+    // // Inspect the model output details
+    // model.outputs.forEach(output => {
+    //     console.log(`Output name: ${output.name}`);
+    //     console.log(`Output shape: ${output.shape}`);
+    //     console.log(`Output dtype: ${output.dtype}`);
+    // });
 
     return model;
 }
@@ -155,24 +161,23 @@ async function detectAndProcessFaces(video, face_detector, model, onnxmodel) {
     const tfjs106tensor = document.getElementById('tfjs106_tensor');
     const onnx106tensor = document.getElementById('onnx106_tensor');
     const tfjs_onnx_different = document.getElementById('onnx_tfjs_different');
+    let inference_avg = [];
 
     videoCanvas.width = video.videoWidth;
     videoCanvas.height = video.videoHeight;
     landmarksCanvas.width = video.videoWidth;
     landmarksCanvas.height = video.videoHeight;
     const scaleFactor = 112;
-    const onnx_data_options = {
-        dataType : "float32", 
-        ImageFormat: "RGB", 
-        resizedHeight: 112,
-        resizedWidth: 112, 
-        norm: {
-            mean: 255                                
-          },
-        ImageTensorLayout: "NCHW"
-    };
+    const processingStartTime = performance.now();
 
     const processFrame = async () => {
+        if (performance.now() - processingStartTime > 10 * 1000) {
+            console.log("Stopping processing after 10 seconds");
+            const average_inference = Math.round(average(inference_avg))
+            tfjs_onnx_different.textContent = average_inference
+            return;
+        }
+        
         try {
             // console.time("processing")
             videoCtx.drawImage(video, 0, 0, videoCanvas.width, videoCanvas.height);
@@ -182,9 +187,8 @@ async function detectAndProcessFaces(video, face_detector, model, onnxmodel) {
             const endTimeFD = performance.now();
             const fdinferenceTime = Math.round(endTimeFD - startTimeFD);
             const faces = detections.detections;
-            // console.log(faces);
-            // console.log("FD Inference time:", fdinferenceTime, "ms");
             fdInference.textContent = fdinferenceTime;
+            
 
             if (faces.length > 0) {
                 for (const detection of faces) {
@@ -210,16 +214,19 @@ async function detectAndProcessFaces(video, face_detector, model, onnxmodel) {
                         tempInput = tempInput.transpose([2, 0, 1]);  // Rearrange dimensions to [3, 112, 112]
                         return tempInput.expandDims(0);  // Add batch dimension to get [1, 3, 112, 112]
                     });
-                    const endtf_time = performance.now();
-                    
-                    const input_onnx_Tensor = await preprocessFaceImage(faceImageData, 112, 112);
-                    const endonnx_time = performance.now();
+                    // const tftensor = input.dataSync()
 
+                    const endtf_time = performance.now();
+                    const input_onnx_Tensor = await onnx_tensorprocessor(faceImageData, 112, 112);
+                    const endonnx_time = performance.now();
 
                     const onnx_tensor_time = Math.round(endonnx_time - endtf_time);
                     const tfjs_tensor_time = Math.round(endtf_time - starttf_time);
                     tfjs106tensor.textContent = tfjs_tensor_time;
                     onnx106tensor.textContent = onnx_tensor_time;
+
+                    // console.log('tjfs tensor', input.dataSync())
+                    // console.log("onnx tensor", input_onnx_Tensor.cpuData)
 
                     const feeds = {"input": input_onnx_Tensor};
                     const startTimeonnx = performance.now();
@@ -228,51 +235,48 @@ async function detectAndProcessFaces(video, face_detector, model, onnxmodel) {
                     const onnxinferencetime = Math.round(endTimeonnx - startTimeonnx);
                     onnx106Inference.textContent = onnxinferencetime;
                     const outputTensor = onnx_pred.output;
-
-                    // To view its underlying data, access its cpuData property
-                    const outputData = outputTensor.cpuData;
-                    console.log("Output data onnx:", outputData);
+                    const normalized_landmarks_onnx = outputTensor.cpuData;
+                    
 
                     const startTimetfjs = performance.now();
                     const predictions = model.predict(input);
                     const endTimetfjs = performance.now();
                     const tfjsinferenceTime = Math.round(endTimetfjs - startTimetfjs);
                     tfjs106Inference.textContent = tfjsinferenceTime;
+                    const normalized_landmarks_tfjs = await predictions[0].data();
 
-                    tfjs_onnx_different.textContent = Math.round(((tfjsinferenceTime - onnxinferencetime)/tfjsinferenceTime)*100);
+                    inference_avg.push(Math.round(((tfjsinferenceTime - onnxinferencetime)/tfjsinferenceTime)*100))
                     
+                    // console.log("Output data tfjs:", normalized_landmarks_tfjs);
+                    // console.log("Output data onnx:", normalized_landmarks_onnx);
 
-                    const normalized_landmarks = await predictions[0].data();
-                    console.log("Output data tfjs:", normalized_landmarks);
-
-
-                    const landmarks = normalizeLandmarksArray(outputData);
-                    // console.timeEnd("processing")
+                    const landmarks_tfjs = normalizeLandmarksArray(normalized_landmarks_tfjs);
+                    const landmarks_onnx = normalizeLandmarksArray(normalized_landmarks_onnx);
+                    // console.log('tfjs', landmarks_tfjs)
+                    // console.log('onnx', landmarks_onnx)
                     
-                    const { valueleft, valueright } = EyeAspectRatio(landmarks);
-                    const mar = MouthAspectRatio(landmarks)
-                    const yaw = calculateYaw(landmarks)
+                    const { valueleft, valueright } = EyeAspectRatio(landmarks_onnx);
+                    const mar = MouthAspectRatio(landmarks_onnx)
+                    const yaw = calculateYaw(landmarks_onnx)
 
                     leftEarValueElement.textContent = valueleft.toFixed(2);
                     rightEarValueElement.textContent = valueright.toFixed(2);
                     marelement.textContent = mar.toFixed(2);
                     yawelement.textContent = yaw.toFixed(2);
-                    // const rescaledLandmarks = outputData.map(value => value * scaleFactor);
-                    // const finalLandmarks = rescaledLandmarks.map((value, index) => {
-                    //     if (index % 2 === 0) {
-                    //         // X coordinate
-                    //         return value * scaleFactorX + boundingBox.originX;
-                    //     } else {
-                    //         // Y coordinate
-                    //         return value * scaleFactorY+ boundingBox.originY;
-                    //     }
-                    // });
+                    const rescaledLandmarks = normalized_landmarks_onnx.map(value => value * scaleFactor);
+                    const finalLandmarks = rescaledLandmarks.map((value, index) => {
+                        if (index % 2 === 0) {
+                            // X coordinate
+                            return value * scaleFactorX + boundingBox.originX;
+                        } else {
+                            // Y coordinate
+                            return value * scaleFactorY+ boundingBox.originY;
+                        }
+                    });
 
 
-                    // const specificIndices = [0, 93, 94, 95, 96];
-                    // drawLandmarksindex(landmarksCanvasCtx, finalLandmarks, specificIndices);
-
-
+                    const specificIndices = [0, 93, 94, 95, 96, 69, 53, 35, 36, 37 ,38 , 39, 42, 43, 44, 45, 46];
+                    drawLandmarksindex(landmarksCanvasCtx, finalLandmarks, specificIndices);
 
                 }
             }
@@ -402,7 +406,7 @@ function calculateYaw(landmarks) {
 }
 
 async function main() {
-    console.log("Backend", tf.getBackend());
+    console.log("TFJS Backend", tf.getBackend());
     const video = await setupCamera();
     const model = await loadModel();
     const onnxmodel = await initializeONNXLandmarkModel();
@@ -410,4 +414,4 @@ async function main() {
     detectAndProcessFaces(video, face_detector, model, onnxmodel);
 }
 // main()
-tf.setBackend('wasm').then(() => main());
+tf.setBackend(accelerator).then(() => main());
