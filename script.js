@@ -50,8 +50,8 @@ let facedetector;
 
 async function initializeMediaPipe() {
     // "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
-    const filesetResolver = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
     const startime = performance.now();
+    const filesetResolver = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
     facedetector = await FaceDetector.createFromOptions(filesetResolver, {
         baseOptions: {
             modelAssetPath: "./blaze_face_short_range.tflite",
@@ -231,7 +231,7 @@ async function detectAndProcessFaces(video, face_detector, model, onnxmodel) {
     const processingStartTime = performance.now();
 
     const processFrame = async () => {
-        if (performance.now() - processingStartTime > 30 * 1000) {
+        if (performance.now() - processingStartTime > 8 * 1000) {
             console.log("Stopping processing after 10 seconds");
             const average_inference = Math.round(average(inference_avg))
             tfjs_onnx_different.textContent = average_inference
