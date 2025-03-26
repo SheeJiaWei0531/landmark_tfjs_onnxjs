@@ -49,6 +49,7 @@ async function onnx_tensorprocessor(faceImageData, targetWidth = 112, targetHeig
 let facedetector;
 
 async function initializeMediaPipe() {
+    // "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
     const filesetResolver = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
     const startime = performance.now();
     facedetector = await FaceDetector.createFromOptions(filesetResolver, {
@@ -91,6 +92,65 @@ async function initializeONNXLandmarkModel() {
     // console.log("outputname", session.outputNames);
     return session;
   }
+
+  function collectCombinedResourceInfo() {
+    // This array will store all resource entries (both initial and new)
+    const combinedResourceInfo = [];
+  
+    // Helper function to extract and format desired information from a resource entry
+    function formatResource(resource) {
+      return {
+        name: resource.name,
+        type: resource.initiatorType,
+        transferSizeKB: Math.round(resource.transferSize / 1024),
+        durationMs: Math.round(resource.duration)
+      };
+    }
+  
+    // 1. Collect and add the already loaded resource entries
+    const initialResources = performance.getEntriesByType("resource");
+    initialResources.forEach(resource => {
+      combinedResourceInfo.push(formatResource(resource));
+    });
+  
+    // Log the initial combined resources
+    // console.log("Initial combined resource info:", combinedResourceInfo);
+  
+    // 2. Set up a PerformanceObserver to collect new resource entries as they load
+    const observer = new PerformanceObserver((list) => {
+      const newEntries = list.getEntries();
+      newEntries.forEach(resource => {
+        combinedResourceInfo.push(formatResource(resource));
+      });
+      // Log the updated combined array every time new entries are added
+    //   console.log("Updated combined resource info:", combinedResourceInfo);
+    });
+  
+    observer.observe({ entryTypes: ['resource'] });
+  
+    return combinedResourceInfo;
+  }
+async function collectInfo() {
+    try {
+
+        const type = navigator.connection.effectiveType;
+        if (type) {
+            console.log("Network information: ", type)
+        }
+        
+        const webgpu = await navigator.gpu;
+        if (webgpu) {
+            console.log("Webgpu support", "True")
+        } else {
+            console.log("Webgpu support", "False")
+        }
+        const allResources = collectCombinedResourceInfo();
+        console.log(allResources)
+          
+    } catch (error) {
+        console.error("Error collecting info:", error);
+      }
+}
 
 async function setupCamera() {
     try {
@@ -171,7 +231,7 @@ async function detectAndProcessFaces(video, face_detector, model, onnxmodel) {
     const processingStartTime = performance.now();
 
     const processFrame = async () => {
-        if (performance.now() - processingStartTime > 10 * 1000) {
+        if (performance.now() - processingStartTime > 30 * 1000) {
             console.log("Stopping processing after 10 seconds");
             const average_inference = Math.round(average(inference_avg))
             tfjs_onnx_different.textContent = average_inference
@@ -407,6 +467,7 @@ function calculateYaw(landmarks) {
 
 async function main() {
     console.log("TFJS Backend", tf.getBackend());
+    collectInfo();
     const video = await setupCamera();
     const model = await loadModel();
     const onnxmodel = await initializeONNXLandmarkModel();
