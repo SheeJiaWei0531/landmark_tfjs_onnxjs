@@ -8,43 +8,6 @@ function average(arr) {
     return arr.reduce((sum, value) => sum + value, 0) / arr.length;
   }
 
-// async function onnx_float32_tensorprocessor(faceImageData, targetWidth = 112, targetHeight = 112) {
-//     const offscreenCanvas = document.createElement('canvas');
-//     offscreenCanvas.width = targetWidth;
-//     offscreenCanvas.height = targetHeight;
-//     const offscreenCtx = offscreenCanvas.getContext('2d');
-
-  
-//     // Create an ImageBitmap from the faceImageData (to handle scaling)
-//     const bitmap = await createImageBitmap(faceImageData);
-//     // Draw the bitmap onto the offscreen canvas (this scales the image)
-//     offscreenCtx.drawImage(bitmap, 0, 0, targetWidth, targetHeight);
-  
-//     // Extract the resized image data (in RGBA order)
-//     const resizedImageData = offscreenCtx.getImageData(0, 0, targetWidth, targetHeight);
-//     const { data } = resizedImageData; // Uint8ClampedArray
-//     const numPixels = targetWidth * targetHeight;
-  
-//     // Create a Float32Array to hold normalized pixel values.
-//     // We want NCHW layout: shape = [1, 3, targetHeight, targetWidth]
-//     // That means first all red values, then green, then blue.
-//     const float32Data = new Float32Array(3 * numPixels);
-  
-//     // Loop over each pixel and extract R, G, and B, normalize by dividing by 255.
-//     for (let i = 0; i < numPixels; i++) {
-//       const baseIndex = i * 4;
-//       float32Data[i] = data[baseIndex] / 255.0;                    // Red channel
-//       float32Data[i + numPixels] = data[baseIndex + 1] / 255.0;      // Green channel
-//       float32Data[i + 2 * numPixels] = data[baseIndex + 2] / 255.0;  // Blue channel
-//       // We ignore the alpha channel (data[baseIndex + 3])
-//     }
-  
-//     // Define the tensor shape: [batch, channels, height, width]
-//     const dims = [1, 3, targetHeight, targetWidth];
-//     const inputONNXTensor = new ort.Tensor("float32", float32Data, dims);
-  
-//     return inputONNXTensor;
-//   }
 
 let facedetector;
 
@@ -62,117 +25,8 @@ async function initializeMediaPipe() {
     const loadtime = Math.round(endtime -startime);
     const fdloadelement = document.getElementById("facedetector_load")
     fdloadelement.textContent = loadtime;
-    // console.log("Face detector model loaded");
+    console.log("Face detector model loaded");
     return facedetector;
-}
-
-// async function initializeONNXLandmarkModel() {
-//     try {
-//         console.log("ONNX Backend", accelerator);
-//         const sessionOption = { 
-//             executionProviders: [accelerator], 
-//             executionMode: "sequential", 
-//             enableCpuMemArena: true,
-//             enableGraphCapture: false,
-//             enableMemPattern: true,
-//             enableProfiling: false,
-//             interOpNumThreads: 1,
-//             intraOpNumThreads: 1,
-//             graphOptimizationLevel: "all"
-//          };
-//         const startime = performance.now();
-//         const quan_path = "./model/onnx/v2/quan_0.0242.onnx";
-//         const path = "./model/onnx/v2/own_pfld_lite_sim_0.0242.onnx";
-//         const session = await ort.InferenceSession.create(quan_path, sessionOption);
-//         const endtime = performance.now();
-//         const loadtime = Math.round(endtime -startime);
-//         const onnxloadelement = document.getElementById("onnx106_load")
-//         onnxloadelement.textContent = loadtime;
-//         console.log("Done load onnx");
-//         return session;
-//         // console.log("ONNX landmark model loaded");
-//         // console.log("ONNX session", session);
-//         // console.log("inputname", session.inputNames);
-//         // console.log("outputname", session.outputNames);
-        
-
-//     } catch (error) {
-//         console.error("Error on load onnx model", error);
-//     }
-    
-//   }
-
-
-
-  function collectCombinedResourceInfo() {
-    // This array will store all resource entries (both initial and new)
-    const combinedResourceInfo = [];
-  
-    // Helper function to extract and format desired information from a resource entry
-    function formatResource(resource) {
-      return {
-        name: resource.name,
-        type: resource.initiatorType,
-        transferSizeKB: Math.round(resource.transferSize / 1024),
-        durationMs: Math.round(resource.duration)
-      };
-    }
-  
-    // 1. Collect and add the already loaded resource entries
-    const initialResources = performance.getEntriesByType("resource");
-    initialResources.forEach(resource => {
-      combinedResourceInfo.push(formatResource(resource));
-    });
-  
-    // Log the initial combined resources
-    // console.log("Initial combined resource info:", combinedResourceInfo);
-  
-    // 2. Set up a PerformanceObserver to collect new resource entries as they load
-    const observer = new PerformanceObserver((list) => {
-      const newEntries = list.getEntries();
-      newEntries.forEach(resource => {
-        combinedResourceInfo.push(formatResource(resource));
-      });
-      // Log the updated combined array every time new entries are added
-    //   console.log("Updated combined resource info:", combinedResourceInfo);
-    });
-  
-    observer.observe({ entryTypes: ['resource'] });
-  
-    return combinedResourceInfo;
-  }
-async function collectInfo() {
-    try {
-
-        const type = navigator.connection.effectiveType;
-        if (type) {
-            console.log("Network information: ", type)
-        }
-        
-        const webgpu = await navigator.gpu;
-        if (webgpu) {
-            console.log("Webgpu support", "True") 
-            const adapter = await navigator.gpu.requestAdapter();
-            if (adapter) {
-                console.log("Adapter", adapter);
-                const device = await adapter.requestDevice();
-                if (device) {
-                    console.log("Device", device);
-                } else {
-                    console.log("Device", "False");
-                }
-            } else {
-                console.log("Adapter", "False");
-            }
-        } else {
-            console.log("Webgpu support", "False")
-        }
-        const allResources = collectCombinedResourceInfo();
-        console.log(allResources)
-          
-    } catch (error) {
-        console.error("Error collecting info:", error);
-      }
 }
 
 async function setupCamera() {
@@ -211,64 +65,20 @@ async function loadLiteModel() {
         const loadtime = Math.round(endtime -startime);
         const liteloadelement = document.getElementById("lite106_load")
         liteloadelement.textContent = loadtime;
-        console.log(tfliteModel);
+        console.log(tfliteModel.inputs[0].shape); // e.g., [1, 3, 112, 112]
+        console.log(tfliteModel.inputs[0].dtype);
+        console.log(tfliteModel.inputs); // e.g., [1, 3, 112, 112]
+        console.log(tfliteModel.outputs);
         console.log('Done load lite');
         return tfliteModel;
-    
-        // Inspect the model input details
-        // model.inputs.forEach(input => {
-        //     console.log(`Input name: ${input.name}`);
-        //     console.log(`Input shape: ${input.shape}`);
-        //     console.log(`Input dtype: ${input.dtype}`);
-        // });
-    
-        // // Inspect the model output details
-        // model.outputs.forEach(output => {
-        //     console.log(`Output name: ${output.name}`);
-        //     console.log(`Output shape: ${output.shape}`);
-        //     console.log(`Output dtype: ${output.dtype}`);
-        // });
     } catch (error) {
         console.error("Error on load lite model", error);
     }
     
 }
 
-async function loadModel() {
-    // console.log('Model load start');
-    try {
-        const startime = performance.now();
-        const path = "./model/tensorflowjs/model.json";
-        const quan_path = "./model/quantfjs/model.json";
-        const model = await tf.loadGraphModel(quan_path);
-        const endtime = performance.now();
-        const loadtime = Math.round(endtime -startime);
-        const tfjsloadelement = document.getElementById("tfjs106_load")
-        tfjsloadelement.textContent = loadtime;
-        console.log('Done load tfjs');
-        // console.log(model)
-        return model;
-    
-        // Inspect the model input details
-        // model.inputs.forEach(input => {
-        //     console.log(`Input name: ${input.name}`);
-        //     console.log(`Input shape: ${input.shape}`);
-        //     console.log(`Input dtype: ${input.dtype}`);
-        // });
-    
-        // // Inspect the model output details
-        // model.outputs.forEach(output => {
-        //     console.log(`Output name: ${output.name}`);
-        //     console.log(`Output shape: ${output.shape}`);
-        //     console.log(`Output dtype: ${output.dtype}`);
-        // });
-    } catch (error) {
-        console.error("Error on load tfjs model", error);
-    }
-    
-}
 
-async function detectAndProcessFaces(video, face_detector, model, model_lite) {
+async function detectAndProcessFaces(video, face_detector, model_lite) {
     console.log("Start processing");
     let flag = true;
     const videoCanvas = document.getElementById('videoCanvas');
@@ -316,6 +126,7 @@ async function detectAndProcessFaces(video, face_detector, model, model_lite) {
             const faces = detections.detections;
             fdInference.textContent = fdinferenceTime;
             
+            
 
             if (faces.length > 0) {
                 for (const detection of faces) {
@@ -340,16 +151,13 @@ async function detectAndProcessFaces(video, face_detector, model, model_lite) {
                         tempInput = tempInput.div(tf.scalar(255));  // Normalize the pixel values to [0, 1]
                         tempInput = tempInput.transpose([2, 0, 1]);  // Rearrange dimensions to [3, 112, 112]
                         return tempInput.expandDims(0);  // Add batch dimension to get [1, 3, 112, 112]
-                    })
+                    });
                     
-                    let inputLite = input.dataSync();
             
-                    // console.log("tensor", inputLite)
+
 
                     const endtf_time = performance.now();
-                    // const input_onnx_Tensor = await onnx_float32_tensorprocessor(faceImageData, 112, 112);
-                    // console.log(input_onnx_Tensor)
-                    // const endonnx_time = performance.now();
+
 
                     // const onnx_tensor_time = Math.round(endonnx_time - endtf_time);
                     const tfjs_tensor_time = Math.round(endtf_time - starttf_time);
@@ -368,20 +176,22 @@ async function detectAndProcessFaces(video, face_detector, model, model_lite) {
                     // onnx106Inference.textContent = onnxinferencetime;
                     // const outputTensor = onnx_pred.output;
                     // const normalized_landmarks_onnx = outputTensor.cpuData;
+    
+                    const startTimelite = performance.now();
+                    const config = { batchSize: 1, verbose: true };
+                    let inputs = {
+                        'serving_default_input:0': tf.zeros([1, 3, 112, 112], 'float32')
+                      };
+                    // const outputs = model_lite.predict(inputs, config);
+
+                    // const firstOutputData = outputs[0].dataSync().slice();
+                    // console.log('First output:', firstOutputData);
                     
-                    // if (flag) {
-                    //     flag = false;
-                    //     const fakeTensor = tf.zeros([1, 3, 112, 112], 'float32');
-                    //     const startTimelite = performance.now();
-                    //     const predictions_lite = model_lite.predict(fakeTensor);
-                    //     console.log(fakeTensor);
-                    //     const predictionsData = predictions_lite.dataSync().slice(); // Creates a new copy of the data
-                    //     predictions_lite.dispose(); // Dispose the tensor if it's no longer needed
-                    //     console.log(predictionsData);
-                    //     model_lite.cleanUp();
-                        
-                    // }
-                    
+                    // const predictionsData = predictions_lite.dataSync().slice(); // Creates a new copy of the data
+                    // predictions_lite.dispose(); // Dispose the tensor if it's no longer needed
+                    // console.log(predictionsData);
+                    // model_lite.cleanUp();
+
                                         
                     // const endTimelite = performance.now(); 
                     // const liteinferenceTime = Math.round(endTimelite - startTimelite);
@@ -390,12 +200,12 @@ async function detectAndProcessFaces(video, face_detector, model, model_lite) {
                     
                     // const normalized_landmarks_lite = await predictions_lite[0].data();
 
-                    const startTimetfjs = performance.now();
-                    const predictions = model.predict(input);
-                    const endTimetfjs = performance.now();
-                    const tfjsinferenceTime = Math.round(endTimetfjs - startTimetfjs);
-                    tfjs106Inference.textContent = tfjsinferenceTime;
-                    const normalized_landmarks_tfjs = await predictions[0].data();
+                    // const startTimetfjs = performance.now();
+                    // const predictions = model.predict(input);
+                    // const endTimetfjs = performance.now();
+                    // const tfjsinferenceTime = Math.round(endTimetfjs - startTimetfjs);
+                    // tfjs106Inference.textContent = tfjsinferenceTime;
+                    // const normalized_landmarks_tfjs = await predictions[0].data();
                     
 
                     // inference_avg.push(Math.round(((tfjsinferenceTime - liteinferenceTime)/tfjsinferenceTime)*100))
@@ -561,131 +371,12 @@ function calculateYaw(landmarks) {
     return value ;
 }
 
-
-function utf8ToBase64(str) {
-    // Encode the string as UTF-8 bytes.
-    const encoder = new TextEncoder();
-    const bytes = encoder.encode(str);
-    
-    // Convert the Uint8Array to a binary string.
-    let binary = '';
-    bytes.forEach((b) => binary += String.fromCharCode(b));
-    
-    // Use btoa to convert the binary string to a Base64-encoded string.
-    return window.btoa(binary);
-  }
-
-  function base64ToUtf8(base64) {
-    const binary = window.atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    const decoder = new TextDecoder();
-    return decoder.decode(bytes);
-  }
-
-
-
-  async function fetchJsFileAsBase64(url) {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch file: ${response.statusText}`);
-    }
-    const text = await response.text();
-    return utf8ToBase64(text);
-  }
-
-
-  async function fetchStoreLoadScript(url, storageKey = 'tfminjs') {
-    try {
-      // Fetch and convert file to a Base64 string.
-      const base64String = await fetchJsFileAsBase64(url);
-      
-      // Store the Base64 string in localStorage.
-      localStorage.setItem(storageKey, base64String);
-      console.log(`Script stored in localStorage under key "${storageKey}".`);
-      
-      // Retrieve the Base64 string from localStorage.
-      const storedBase64 = localStorage.getItem(storageKey);
-      if (!storedBase64) {
-        throw new Error("No script found in localStorage.");
-      }
-      
-      // Convert the Base64 string back to plain text.
-      const scriptContent = base64ToUtf8(storedBase64);
-      
-      // Create a <script> element and inject the content.
-      const scriptElement = document.createElement('script');
-      scriptElement.type = 'text/javascript';
-      scriptElement.text = scriptContent;
-      document.head.appendChild(scriptElement);
-      
-      console.log("Script loaded from localStorage and executed.");
-    } catch (error) {
-      console.error("Error in fetchStoreLoadScript:", error);
-    }
-  }
-
-
- 
-
-
 async function main() {
-    // const url = "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/tf-backend-wasm.min.js"
-    // const base64str = await fetchJsFileAsBase64(url);
-    // localStorage.setItem("minwasmjs", base64str);
-    // const storedBase64 = localStorage.getItem("tfminjs");
-    // const scriptContent = base64ToUtf8(storedBase64);
-    // const scriptElement = document.createElement('script');
-    // scriptElement.type = 'text/javascript';
-    // scriptElement.appendChild(document.createTextNode(scriptContent));
-    // document.head.appendChild(scriptElement);
-    
-    
-
-    
-
-
-
-
     console.log("TFJS Backend", tf.getBackend());
-    collectInfo();
-    // const resourceURL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm/vision_wasm_internal.wasm';
-    // const cacheStorage = await caches.open('testing');
-    // cacheStorage.add(resourceURL);
-    // const cache = await caches.open('testing');
-    // const cachedResponse = await cache.match(resourceURL);
-    // fetch(resourceURL).then((response) => {
-    //     if (!response.ok) {
-    //       throw new TypeError("Bad response status");
-    //     }
-    //     return true
-    //   });
-    // fetch("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm/vision_wasm_internal.js").then((response) => {
-    // if (!response.ok) {
-    //     throw new TypeError("Bad response status");
-    // }
-    // return true
-    // });
-    
-
-
-    
-
-    
-
-
-
-      
-
     const video = await setupCamera();
     const model_lite = await loadLiteModel();
-    const model = await loadModel();
-    // const onnxmodel = await initializeONNXLandmarkModel();
     const face_detector = await initializeMediaPipe();
-    detectAndProcessFaces(video, face_detector, model, model_lite);
-    
+    detectAndProcessFaces(video, face_detector, model_lite);
 }
 // main()
 tf.setBackend(accelerator).then(() => main());
