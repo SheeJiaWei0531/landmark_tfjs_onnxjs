@@ -201,45 +201,45 @@ async function setupCamera() {
     }
 }
 
-async function loadLiteModel() {
-    // console.log('Model load start');
-    try {
-        // console.log('Start load lite');
-        const startime = performance.now();
-        const tfliteModel = await tflite.loadTFLiteModel("./model/lite/model_lite.tflite");
-        const endtime = performance.now();
-        const loadtime = Math.round(endtime -startime);
-        const liteloadelement = document.getElementById("lite106_load")
-        liteloadelement.textContent = loadtime;
-        console.log(tfliteModel);
-        console.log('Done load lite');
-        return tfliteModel;
+// async function loadLiteModel() {
+//     // console.log('Model load start');
+//     try {
+//         // console.log('Start load lite');
+//         const startime = performance.now();
+//         const tfliteModel = await tflite.loadTFLiteModel("./model/lite/model_lite.tflite");
+//         const endtime = performance.now();
+//         const loadtime = Math.round(endtime -startime);
+//         const liteloadelement = document.getElementById("lite106_load")
+//         liteloadelement.textContent = loadtime;
+//         console.log(tfliteModel);
+//         console.log('Done load lite');
+//         return tfliteModel;
     
-        // Inspect the model input details
-        // model.inputs.forEach(input => {
-        //     console.log(`Input name: ${input.name}`);
-        //     console.log(`Input shape: ${input.shape}`);
-        //     console.log(`Input dtype: ${input.dtype}`);
-        // });
+//         // Inspect the model input details
+//         // model.inputs.forEach(input => {
+//         //     console.log(`Input name: ${input.name}`);
+//         //     console.log(`Input shape: ${input.shape}`);
+//         //     console.log(`Input dtype: ${input.dtype}`);
+//         // });
     
-        // // Inspect the model output details
-        // model.outputs.forEach(output => {
-        //     console.log(`Output name: ${output.name}`);
-        //     console.log(`Output shape: ${output.shape}`);
-        //     console.log(`Output dtype: ${output.dtype}`);
-        // });
-    } catch (error) {
-        console.error("Error on load lite model", error);
-    }
+//         // // Inspect the model output details
+//         // model.outputs.forEach(output => {
+//         //     console.log(`Output name: ${output.name}`);
+//         //     console.log(`Output shape: ${output.shape}`);
+//         //     console.log(`Output dtype: ${output.dtype}`);
+//         // });
+//     } catch (error) {
+//         console.error("Error on load lite model", error);
+//     }
     
-}
+// }
 
 async function loadModel() {
     // console.log('Model load start');
     try {
         const startime = performance.now();
-        const path = "./model/tensorflowjs/model.json";
-        const quan_path = "./model/quantfjs/model.json";
+        const path = "./detector/tfjs/model.json";
+        const quan_path = "./detector/quan_tfjs/model.json";
         const model = await tf.loadGraphModel(quan_path);
         const endtime = performance.now();
         const loadtime = Math.round(endtime -startime);
@@ -268,7 +268,7 @@ async function loadModel() {
     
 }
 
-async function detectAndProcessFaces(video, face_detector, model, model_lite) {
+async function detectAndProcessFaces(video, face_detector, model) {
     console.log("Start processing");
     let flag = true;
     const videoCanvas = document.getElementById('videoCanvas');
@@ -342,7 +342,7 @@ async function detectAndProcessFaces(video, face_detector, model, model_lite) {
                         return tempInput.expandDims(0);  // Add batch dimension to get [1, 3, 112, 112]
                     })
                     
-                    let inputLite = input.dataSync();
+                    // let inputLite = input.dataSync();
             
                     // console.log("tensor", inputLite)
 
@@ -680,11 +680,11 @@ async function main() {
       
 
     const video = await setupCamera();
-    const model_lite = await loadLiteModel();
+    // const model_lite = await loadLiteModel();
     const model = await loadModel();
     // const onnxmodel = await initializeONNXLandmarkModel();
     const face_detector = await initializeMediaPipe();
-    detectAndProcessFaces(video, face_detector, model, model_lite);
+    detectAndProcessFaces(video, face_detector, model);
     
 }
 // main()
